@@ -262,11 +262,19 @@ kfork(void)
   struct proc *np;
   struct proc *p = myproc();
 
+  //printk("look in process table for an UNUSED proc\n");
+  //printk("get next available pid: %d\n", p->pid); 
+  //printk("allocate new trapframe page\n");
+  //printk("allocate new page for the user page table\n");
+  //printk("map trampoline code at MAXVA - PGSIZE in user VA space\n");
+  //printk("map new trapframe at TRAMPOLINE - PGSIZE in user VA space\n");
+  //printk("set up new context for child to start executing at forkret\n");
   // Allocate process.
   if ((np = allocproc()) == 0) {
     return -1;
   }
 
+  //printk("copy memory from parent to child, same content but not pages, NOT COW\n");
   // Copy user memory from parent to child.
   if (uvmcopy(p->pagetable, np->pagetable, p->sz) < 0) {
     freeproc(np);
@@ -276,31 +284,39 @@ kfork(void)
   np->sz = p->sz;
 
   // copy saved user registers.
+  //printk("copy saved user registers from parent trapframe to child trapframe\n");
   *(np->trapframe) = *(p->trapframe);
 
   // Cause fork to return 0 in the child.
+  //printk("cause fork to return 0 in the child\n");
   np->trapframe->a0 = 0;
 
   // increment reference counts on open file descriptors.
+  //printk("increment reference counts on open files + child inherits pointers to file structures\n");
   for (i = 0; i < NOFILE; i++)
     if (p->ofile[i])
       np->ofile[i] = filedup(p->ofile[i]);
+  //printk("increment reference count to inode + child inherits pointer to inode\n");
   np->cwd = idup(p->cwd);
 
+  //printk("child inherits process name\n");
   safestrcpy(np->name, p->name, sizeof(p->name));
 
   pid = np->pid;
 
   release(&np->lock);
 
+  //printk("establish parent-child relationship: np->parent = p\n");
   acquire(&wait_lock);
   np->parent = p;
   release(&wait_lock);
 
+  //printk("set child state to RUNNABLE\n");
   acquire(&np->lock);
   np->state = RUNNABLE;
   release(&np->lock);
 
+  //printk("parent returns child PID\n");
   return pid;
 }
 
@@ -360,6 +376,7 @@ kexit(int status)
   release(&wait_lock);
 
   // Jump into the scheduler, never to return.
+  printk("[CS] exit pid=%d\n", p->pid);
   sched();
   panic("zombie exit");
 }
@@ -450,6 +467,7 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+        printk("[CS] sched pid=%d cpu=%d\n", p->pid, cpuid());
         swtch(&c->context, &p->context);
 
         // Don't re-enable interrupts on release.
@@ -503,6 +521,7 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
+  printk("[CS] timer pid=%d\n", p->pid);
   sched();
   release(&p->lock);
 }
@@ -567,6 +586,7 @@ sleep(void)
   acquire(&p->lock);
   if (p->chan != 0) {
     p->state = SLEEPING;
+    printk("[CS] sleep pid=%d\n", p->pid);
     sched();
   }
   release(&p->lock);
@@ -588,6 +608,7 @@ wakeup(void *chan)
       // If this waiting process has gotten so far as to actually
       // go to sleep, also set it back to RUNNING.
       if (p->state == SLEEPING) {
+        printk("[] wake pid=%d\n", p->pid);
         p->state = RUNNABLE;
       }
     }

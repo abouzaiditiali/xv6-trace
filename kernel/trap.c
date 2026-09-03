@@ -37,6 +37,7 @@ trapinithart(void)
 uint64
 usertrap(void)
 {
+
   int which_dev = 0;
 
   if ((r_sstatus() & SSTATUS_SPP) != 0)
@@ -67,6 +68,16 @@ usertrap(void)
 
     syscall();
   } else if ((which_dev = devintr()) != 0) {
+    if (which_dev == 2) {
+        printk("usertrap:trap.c | USER TRAP: TIMER INTERRUPT\n");
+    } else {
+        int irq = plic_claim();
+        if (irq == UART0_IRQ) {
+            printk("usertrap:trap.c | USER TRAP: UART INTERRUPT\n");
+        } else if (irq == VIRTIO0_IRQ) {
+            printk("usertrap:trap.c | USER TRAP: VIRTIO INTERRUPT\n");
+        }
+    }
     // ok
   } else if ((r_scause() == 15 || r_scause() == 13) &&
              vmfault(p->pagetable, p->sz, r_stval(),
@@ -82,8 +93,9 @@ usertrap(void)
     kexit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if (which_dev == 2)
+  if (which_dev == 2) {
     yield();
+  }
 
   prepare_return();
 
