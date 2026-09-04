@@ -170,7 +170,7 @@ syscall(void)
   if (num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     // Use num to lookup the system call function for num, call it,
     // and store its return value in p->trapframe->a0
-    printk("[SYSCALL] %s pid=%d\n", syscall_names[num], p->pid);
+    printk("[pid %d | cpu %d] [SYS] %s\n", p->pid, cpuid(), syscall_names[num]);
     p->trapframe->a0 = syscalls[num]();
   } else {
     printk("%d %s: unknown sys call %d\n", p->pid, p->name, num);
