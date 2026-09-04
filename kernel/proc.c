@@ -314,7 +314,7 @@ kfork(void)
   //printk("set child state to RUNNABLE\n");
   acquire(&np->lock);
   np->state = RUNNABLE;
-  printk("[pid %d | cpu %d] [child RUNNABLE] pid=%d\n", 
+  printk("[pid %d | cpu %d] [child RUNNABLE] pid=%d (kfork)\n", 
                         p->pid, cpuid(), np->pid);
   release(&np->lock);
 
@@ -374,7 +374,7 @@ kexit(int status)
 
   p->xstate = status;
   p->state = ZOMBIE;
-  printk("[pid %d | cpu %d] [ZOMBIE]\n", p->pid, cpuid());
+  printk("[pid %d | cpu %d] [ZOMBIE] (kexit)\n", p->pid, cpuid());
 
   release(&wait_lock);
 
