@@ -68,16 +68,6 @@ usertrap(void)
 
     syscall();
   } else if ((which_dev = devintr()) != 0) {
-    if (which_dev == 2) {
-        printk("usertrap:trap.c | USER TRAP: TIMER INTERRUPT\n");
-    } else {
-        int irq = plic_claim();
-        if (irq == UART0_IRQ) {
-            printk("usertrap:trap.c | USER TRAP: UART INTERRUPT\n");
-        } else if (irq == VIRTIO0_IRQ) {
-            printk("usertrap:trap.c | USER TRAP: VIRTIO INTERRUPT\n");
-        }
-    }
     // ok
   } else if ((r_scause() == 15 || r_scause() == 13) &&
              vmfault(p->pagetable, p->sz, r_stval(),
@@ -94,6 +84,7 @@ usertrap(void)
 
   // give up the CPU if this is a timer interrupt.
   if (which_dev == 2) {
+    printk("[pid %d | cpu %d] [INTR] timer (USER)\n", p->pid, cpuid());
     yield();
   }
 
@@ -166,8 +157,10 @@ kerneltrap()
   }
 
   // give up the CPU if this is a timer interrupt.
-  if (which_dev == 2 && myproc() != 0)
+  if (which_dev == 2 && myproc() != 0) {
+    printk("[pid %d | cpu %d] [INTR] timer (KERNEL)\n", myproc()->pid, cpuid());
     yield();
+  }
 
   // the yield() may have caused some traps to occur,
   // so restore trap registers for use by kernelvec.S's sepc instruction.

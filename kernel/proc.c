@@ -314,7 +314,7 @@ kfork(void)
   //printk("set child state to RUNNABLE\n");
   acquire(&np->lock);
   np->state = RUNNABLE;
-  printk("[pid %d | cpu %d] [ST] [pid=%d ->RE]\n", 
+  printk("[pid %d | cpu %d] [child RUNNABLE] pid=%d\n", 
                         p->pid, cpuid(), np->pid);
   release(&np->lock);
 
@@ -374,7 +374,7 @@ kexit(int status)
 
   p->xstate = status;
   p->state = ZOMBIE;
-  printk("[pid %d | cpu %d] [ST] [pid=%d RG->Z]\n", p->pid, cpuid(), p->pid);
+  printk("[pid %d | cpu %d] [ZOMBIE]\n", p->pid, cpuid());
 
   release(&wait_lock);
 
@@ -469,10 +469,10 @@ scheduler(void)
         // to release its lock and then reacquire it
         // before jumping back to us.
         p->state = RUNNING;
-        printk("[sched | cpu %d] [ST] [pid=%d RE->RG]\n", 
+        printk("[sched | cpu %d] [SCHED] pid=%d\n", 
                             cpuid(), p->pid);
         c->proc = p;
-        printk("[sched | cpu %d] [CS] swtch to pid %d\n", cpuid(), p->pid);
+        printk("[sched | cpu %d] [SWTCH] pid=%d\n", cpuid(), p->pid);
         swtch(&c->context, &p->context);
 
         // Don't re-enable interrupts on release.
@@ -515,7 +515,7 @@ sched(void)
     panic("sched interruptible");
 
   intena = mycpu()->intena;
-  printk("[pid %d | cpu %d] [CS] swtch to sched\n", p->pid, cpuid());
+  printk("[pid %d | cpu %d] [SWTCH] sched\n", p->pid, cpuid());
   swtch(&p->context, &mycpu()->context);
   mycpu()->intena = intena;
 }
@@ -527,7 +527,7 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
-  printk("[pid %d | cpu %d] [ST] [pid=%d RG->RE]\n", p->pid, cpuid(), p->pid);
+  printk("[pid %d | cpu %d] [TIMER]\n", p->pid, cpuid());
   sched();
   release(&p->lock);
 }
@@ -592,8 +592,8 @@ sleep(void)
   acquire(&p->lock);
   if (p->chan != 0) {
     p->state = SLEEPING;
-    printk("[pid %d | cpu %d] [ST] [pid=%d RG->S chan=0x%lx]\n", 
-            p->pid, cpuid(), p->pid, (uint64)p->chan);
+    printk("[pid %d | cpu %d] [SLEEP] chan=0x%lx\n", 
+            p->pid, cpuid(), (uint64)p->chan);
     sched();
   }
   release(&p->lock);
@@ -618,10 +618,10 @@ wakeup(void *chan)
         p->state = RUNNABLE;
         struct proc *cur_p = myproc();                                                  
         if (cur_p) {                                                                    
-            printk("[pid %d | cpu %d] [ST] [pid=%d S->RE chan=0x%lx]\n", 
+            printk("[pid %d | cpu %d] [WAKE] pid=%d chan=0x%lx\n", 
                         cur_p->pid, cpuid(), p->pid, (uint64)chan);
         } else {                                                                    
-            printk("[sched | cpu %d] [ST] [pid=%d S->RE chan=0x%lx]\n", 
+            printk("[sched | cpu %d] [WAKE] pid=%d chan=0x%lx\n", 
                         cpuid(), p->pid, (uint64)chan);
         }
       }

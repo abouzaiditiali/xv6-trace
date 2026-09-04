@@ -282,6 +282,8 @@ virtio_disk_rw(struct buf *b, int write)
 
   io_fence();
 
+  printk("[pid %d | cpu %d] [I/0] chan=0x%lx\n",
+       myproc()->pid, cpuid(), (uint64)b);
   *R(VIRTIO_MMIO_QUEUE_NOTIFY) = 0; // value is queue number
 
   // Wait for virtio_disk_intr() to say request has finished.
@@ -314,13 +316,6 @@ virtio_disk_intr()
 
   io_fence();
 
-  struct proc *p = myproc();
-  if (p) {
-      printk("[pid %d | cpu %d] [INTR] virtio\n", p->pid, cpuid());
-  } else {
-      printk("[sched | cpu %d] [INTR] virtio\n", cpuid());
-  }
-
   // the device increments disk.used->idx when it
   // adds an entry to the used ring.
 
@@ -334,6 +329,14 @@ virtio_disk_intr()
     struct buf *b = disk.info[id].b;
     b->disk = 0; // disk is done with buf
 
+    struct proc *p = myproc();
+    if (p) {
+      printk("[pid %d | cpu %d] [VIRTIO0_IRQ] chan=0x%lx\n",
+                p->pid, cpuid(), (uint64)b);
+    } else {
+       printk("[sched | cpu %d] [VIRTIO0_IRQ] chan=0x%lx\n",
+                cpuid(), (uint64)b);
+    }
     wakeup(b);
 
     disk.used_idx += 1;
