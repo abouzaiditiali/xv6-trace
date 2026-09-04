@@ -314,6 +314,7 @@ kfork(void)
   //printk("set child state to RUNNABLE\n");
   acquire(&np->lock);
   np->state = RUNNABLE;
+  printk("[%d] [RUNNABLE] (kfork) [NI]\n", np->pid);
   release(&np->lock);
 
   //printk("parent returns child PID\n");
@@ -372,11 +373,11 @@ kexit(int status)
 
   p->xstate = status;
   p->state = ZOMBIE;
+  printk("[pid %d | cpu %d] [RUNNING -> ZOMBIE] (exit)\n", p->pid, cpuid());
 
   release(&wait_lock);
 
   // Jump into the scheduler, never to return.
-  printk("[CS] exit pid=%d\n", p->pid);
   sched();
   panic("zombie exit");
 }
@@ -430,6 +431,7 @@ kwait(uint64 addr)
     // Wait for a child to exit.
     sleep_prepare(p); //DOC: wait-sleep
     release(&wait_lock);
+    //printk("[%d] [SLEEPING] (wait-sleep)\n", p->pid);
     sleep();
     acquire(&wait_lock);
   }
@@ -466,8 +468,9 @@ scheduler(void)
         // to release its lock and then reacquire it
         // before jumping back to us.
         p->state = RUNNING;
+        printk("[sched | cpu %d] pid=%d [RUNNABLE -> RUNNING] (scheduler)\n", cpuid(), p->pid);
         c->proc = p;
-        printk("[CS] sched pid=%d cpu=%d\n", p->pid, cpuid());
+        printk("[sched | cpu %d] [CS] switch to %d (scheduler)\n", cpuid(), p->pid);
         swtch(&c->context, &p->context);
 
         // Don't re-enable interrupts on release.
@@ -510,6 +513,7 @@ sched(void)
     panic("sched interruptible");
 
   intena = mycpu()->intena;
+  printk("[pid %d | cpu %d] [CS] switch to sched (sched)\n", p->pid, cpuid());
   swtch(&p->context, &mycpu()->context);
   mycpu()->intena = intena;
 }
@@ -521,7 +525,7 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
-  printk("[CS] timer pid=%d\n", p->pid);
+  printk("[pid %d | cpu %d] [RUNNING -> RUNNABLE] (yield)\n", p->pid, cpuid());
   sched();
   release(&p->lock);
 }
@@ -586,7 +590,8 @@ sleep(void)
   acquire(&p->lock);
   if (p->chan != 0) {
     p->state = SLEEPING;
-    printk("[CS] sleep pid=%d\n", p->pid);
+    printk("[pid %d | cpu %d] [RUNNING -> SLEEPING] (sleep) chan=0x%lx\n", 
+            p->pid, cpuid(), (uint64)p->chan);
     sched();
   }
   release(&p->lock);
@@ -608,8 +613,15 @@ wakeup(void *chan)
       // If this waiting process has gotten so far as to actually
       // go to sleep, also set it back to RUNNING.
       if (p->state == SLEEPING) {
-        printk("[] wake pid=%d\n", p->pid);
         p->state = RUNNABLE;
+        struct proc *cur_p = myproc();                                                  
+        if (cur_p) {                                                                    
+            printk("[pid %d | cpu %d] pid=%d [SLEEPING -> RUNNABLE] (wakeup) chan=0x%lx\n", 
+                        cur_p->pid, cpuid(), p->pid, (uint64)chan);
+        } else {                                                                    
+            printk("[sched | cpu %d] pid=%d [SLEEPING -> RUNNABLE] (wakeup) chan=0x%lx\n", 
+                        cpuid(), p->pid, (uint64)chan);
+        }
       }
     }
     release(&p->lock);

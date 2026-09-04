@@ -15,6 +15,7 @@
 #include "fs.h"
 #include "buf.h"
 #include "virtio.h"
+#include "proc.h"
 
 // the address of virtio mmio register r.
 #define R(r) ((volatile uint32 *)(VIRTIO0 + (r)))
@@ -287,6 +288,7 @@ virtio_disk_rw(struct buf *b, int write)
   while (b->disk == 1) {
     sleep_prepare(b);
     release(&disk.vdisk_lock);
+    //printk("[%d] [BLOCK] VIRTIO (virtio_disk_rw) chan=0x%lx\n", myproc()->pid, (uint64)b);
     sleep();
     acquire(&disk.vdisk_lock);
   }
@@ -324,6 +326,15 @@ virtio_disk_intr()
 
     struct buf *b = disk.info[id].b;
     b->disk = 0; // disk is done with buf
+
+    struct proc *p = myproc();
+    if (p) {
+        printk("[pid %d | cpu %d] [INTERRUPT] VIRTIO (virtio_disk_intr) chan=0x%lx [NI]\n", 
+                p->pid, cpuid(), (uint64)b);
+    } else {
+        printk("[sched | cpu %d] [INTERRUPT] VIRTIO (virtio_disk_intr) chan=0x%lx [NI]\n", 
+                cpuid(), (uint64)b);
+    }
     wakeup(b);
 
     disk.used_idx += 1;
