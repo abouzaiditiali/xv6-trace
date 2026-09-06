@@ -299,8 +299,8 @@ kfork(void)
 
   acquire(&np->lock);
   np->state = RUNNABLE;
-  printk("[pid %d | cpu %d] [child RUNNABLE] pid=%d (kfork)\n", 
-                        p->pid, cpuid(), np->pid);
+  printk("[pid %d | cpu %d] [child RUNNABLE] pid=%d (kfork)\n", p->pid, cpuid(),
+         np->pid);
   release(&np->lock);
 
   return pid;
@@ -452,8 +452,7 @@ scheduler(void)
         // to release its lock and then reacquire it
         // before jumping back to us.
         p->state = RUNNING;
-        printk("[sched | cpu %d] [SCHED] pid=%d\n", 
-                            cpuid(), p->pid);
+        printk("[sched | cpu %d] [SCHED] pid=%d\n", cpuid(), p->pid);
         c->proc = p;
         printk("[sched | cpu %d] [SWTCH] pid=%d\n", cpuid(), p->pid);
         swtch(&c->context, &p->context);
@@ -575,8 +574,8 @@ sleep(void)
   acquire(&p->lock);
   if (p->chan != 0) {
     p->state = SLEEPING;
-    printk("[pid %d | cpu %d] [SLEEP] chan=0x%lx\n", 
-            p->pid, cpuid(), (uint64)p->chan);
+    printk("[pid %d | cpu %d] [SLEEP] chan=0x%lx\n", p->pid, cpuid(),
+           (uint64)p->chan);
     sched();
   }
   release(&p->lock);
@@ -599,13 +598,13 @@ wakeup(void *chan)
       // go to sleep, also set it back to RUNNING.
       if (p->state == SLEEPING) {
         p->state = RUNNABLE;
-        struct proc *cur_p = myproc();                                                  
-        if (cur_p) {                                                                    
-            printk("[pid %d | cpu %d] [WAKE] pid=%d chan=0x%lx\n", 
-                        cur_p->pid, cpuid(), p->pid, (uint64)chan);
-        } else {                                                                    
-            printk("[sched | cpu %d] [WAKE] pid=%d chan=0x%lx\n", 
-                        cpuid(), p->pid, (uint64)chan);
+        struct proc *cur_p = myproc();
+        if (cur_p) {
+          printk("[pid %d | cpu %d] [WAKE] pid=%d chan=0x%lx\n", cur_p->pid,
+                 cpuid(), p->pid, (uint64)chan);
+        } else {
+          printk("[sched | cpu %d] [WAKE] pid=%d chan=0x%lx\n", cpuid(), p->pid,
+                 (uint64)chan);
         }
       }
     }
