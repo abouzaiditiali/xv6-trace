@@ -290,7 +290,6 @@ virtio_disk_rw(struct buf *b, int write)
   while (b->disk == 1) {
     sleep_prepare(b);
     release(&disk.vdisk_lock);
-    //printk("[pid %d | cpu %d] [BLOCK] virtio_disk_rw chan=0x%lx\n", myproc()->pid, cpuid(), (uint64)b);
     sleep();
     acquire(&disk.vdisk_lock);
   }
