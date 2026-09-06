@@ -160,7 +160,7 @@ static const char *syscall_names[] = {
   [SYS_sync]    = "sync",
 };
 
-bool
+int
 print_sys(int num)
 {
     return num == SYS_fork  ||
