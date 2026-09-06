@@ -1,3 +1,132 @@
+I added a couple printk statements and some logic to build a stronger
+intuition of how xv6's scheduling subsystem works.
+You can run these commands to review the differences with the 
+upstream MIT xv6 repo:
+
+git clone https://github.com/abouzaiditiali/xv6-trace
+cd xv6-trace
+git remote add upstream https://github.com/mit-pdos/xv6-riscv.git
+git fetch upstream
+git diff upstream/riscv..sched-trace
+
+You can then boot xv6 and see what happens. 
+The tracing follows the format below:
+
+[X | Y] [Z] fields
+
+Here is an example:
+
+[pid 2 | cpu 0] [SLEEP] chan=0x80019720
+
+Y is the cpu that statement ran on.
+X indicates the execution context on Y when that statement ran. 
+The execution context can either be that of a process or that of the 
+scheduler specific to that cpu.
+Z is the event 'near' the printk statement. 
+One thing to note is that all the printk statements I inserted are in 
+uninterruptible sections so the cpu and execution context accurately
+describe where the event takes place.
+
+The example can be read as: pid 2 goes to sleep on channel 0x80019720. 
+More precisely, the statement indicates that pid 2's state
+changed from RUNNING to SLEEPING. That state transition happened on cpu 0
+under pid 2's kernel execution context.
+
+A useful technique is to 'git grep' the event [Z].
+That way, you can see where the printk statement is. 
+
+process lifecycle:
+[WAKE]
+[SWTCH]
+[SLEEP]
+
+asynchronous traps:
+[VIRTIO0_IRQ]
+[TIMER_IRQ]
+
+synchronous traps:
+[SYS]
+
+and more.
+
+Feel free to contribute in any way. 
+If you read through here, here is a trace to meditate on.
+It starts with init forking and ends with the shell printing the $ prompt.
+
+I manually added an extra line somewhere. That line can never printed there 
+in a normal trace. Try to find it...
+
+[pid 1 | cpu 1] [SYS] fork
+[pid 1 | cpu 1] [SYS] wait
+[pid 1 | cpu 1] [SLEEP] chan=0x80012ae0
+[pid 1 | cpu 1] [SWTCH] sched
+[sched | cpu 1] [SWTCH] pid=2
+[pid 2 | cpu 1] [SYS] exec
+[pid 2 | cpu 1] [I/0] chan=0x8001f1a8
+[pid 2 | cpu 1] [SLEEP] chan=0x8001f1a8
+[pid 2 | cpu 1] [SWTCH] sched
+[sched | cpu 0] [VIRTIO0_IRQ] chan=0x8001f1a8
+[sched | cpu 0] [WAKE] pid=2 chan=0x8001f1a8
+[sched | cpu 1] [SWTCH] pid=2
+[pid 2 | cpu 1] [I/0] chan=0x8001f600
+[pid 2 | cpu 1] [SLEEP] chan=0x8001f600
+[pid 2 | cpu 1] [SWTCH] sched
+[sched | cpu 1] [VIRTIO0_IRQ] chan=0x8001f600
+[sched | cpu 1] [WAKE] pid=2 chan=0x8001f600
+[sched | cpu 0] [SWTCH] pid=2
+[pid 2 | cpu 0] [I/0] chan=0x8001fa58
+[pid 2 | cpu 0] [SLEEP] chan=0x8001fa58
+[sched | cpu 1] [VIRTIO0_IRQ] chan=0x8001fa58
+[pid 2 | cpu 0] [SWTCH] sched
+[sched | cpu 1] [WAKE] pid=2 chan=0x8001fa58
+[sched | cpu 1] [SWTCH] pid=2
+[pid 2 | cpu 1] [I/0] chan=0x8001feb0
+[sched | cpu 0] [VIRTIO0_IRQ] chan=0x8001feb0
+[pid 2 | cpu 1] [I/0] chan=0x80020308
+[sched | cpu 0] [VIRTIO0_IRQ] chan=0x80020308
+[pid 2 | cpu 1] [SLEEP] chan=0x80020308
+[pid 2 | cpu 1] [SWTCH] sched
+[sched | cpu 0] [VIRTIO0_IRQ] chan=0x80020308
+[sched | cpu 0] [WAKE] pid=2 chan=0x80020308
+[sched | cpu 1] [SWTCH] pid=2
+[pid 2 | cpu 1] [I/0] chan=0x80018510
+[pid 2 | cpu 1] [SLEEP] chan=0x80018510
+[pid 2 | cpu 1] [SWTCH] sched
+[sched | cpu 0] [VIRTIO0_IRQ] chan=0x80018510
+[sched | cpu 0] [WAKE] pid=2 chan=0x80018510
+[sched | cpu 1] [SWTCH] pid=2
+[pid 2 | cpu 1] [I/0] chan=0x80019670
+[pid 2 | cpu 1] [SLEEP] chan=0x80019670
+[pid 2 | cpu 1] [SWTCH] sched
+[sched | cpu 0] [VIRTIO0_IRQ] chan=0x80019670
+[sched | cpu 0] [WAKE] pid=2 chan=0x80019670
+[sched | cpu 1] [SWTCH] pid=2
+[pid 2 | cpu 1] [I/0] chan=0x80019ac8
+[pid 2 | cpu 1] [SLEEP] chan=0x80019ac8
+[pid 2 | cpu 1] [SWTCH] sched
+[sched | cpu 2] [VIRTIO0_IRQ] chan=0x80019ac8
+[sched | cpu 2] [WAKE] pid=2 chan=0x80019ac8
+[sched | cpu 2] [SWTCH] pid=2
+[pid 2 | cpu 2] [I/0] chan=0x80019f20
+[pid 2 | cpu 2] [SLEEP] chan=0x80019f20
+[pid 2 | cpu 2] [SWTCH] sched
+[sched | cpu 2] [VIRTIO0_IRQ] chan=0x80019f20
+[sched | cpu 2] [WAKE] pid=2 chan=0x80019f20
+[sched | cpu 2] [SWTCH] pid=2
+[pid 2 | cpu 2] [I/0] chan=0x8001a378
+[pid 2 | cpu 2] [SLEEP] chan=0x8001a378
+[pid 2 | cpu 2] [SWTCH] sched
+[sched | cpu 0] [VIRTIO0_IRQ] chan=0x8001a378
+[sched | cpu 0] [WAKE] pid=2 chan=0x8001a378
+[sched | cpu 2] [SWTCH] pid=2
+[pid 2 | cpu 2] [SYS] write
+$ [pid 2 | cpu 2] [SYS] read
+[pid 2 | cpu 2] [SLEEP] chan=0x80012638
+[pid 2 | cpu 2] [SWTCH] sched
+
+
+-------------------------------------------------------------------------
+
 xv6 is a re-implementation of Dennis Ritchie's and Ken Thompson's Unix
 Version 6 (v6).  xv6 loosely follows the structure and style of v6,
 but is implemented for a modern RISC-V multiprocessor using ANSI C.

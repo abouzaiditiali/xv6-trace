@@ -299,8 +299,6 @@ kfork(void)
 
   acquire(&np->lock);
   np->state = RUNNABLE;
-  printk("[pid %d | cpu %d] [child RUNNABLE] pid=%d (kfork)\n", p->pid, cpuid(),
-         np->pid);
   release(&np->lock);
 
   return pid;
@@ -452,7 +450,6 @@ scheduler(void)
         // to release its lock and then reacquire it
         // before jumping back to us.
         p->state = RUNNING;
-        printk("[sched | cpu %d] [SCHED] pid=%d\n", cpuid(), p->pid);
         c->proc = p;
         printk("[sched | cpu %d] [SWTCH] pid=%d\n", cpuid(), p->pid);
         swtch(&c->context, &p->context);
@@ -509,7 +506,6 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
-  printk("[pid %d | cpu %d] [TIMER]\n", p->pid, cpuid());
   sched();
   release(&p->lock);
 }

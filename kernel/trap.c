@@ -84,7 +84,7 @@ usertrap(void)
 
   // give up the CPU if this is a timer interrupt.
   if (which_dev == 2) {
-    printk("[pid %d | cpu %d] [INTR] timer (USER)\n", p->pid, cpuid());
+    printk("[pid %d | cpu %d] [TIMER_IRQ] user\n", p->pid, cpuid());
     yield();
   }
 
@@ -158,7 +158,7 @@ kerneltrap()
 
   // give up the CPU if this is a timer interrupt.
   if (which_dev == 2 && myproc() != 0) {
-    printk("[pid %d | cpu %d] [INTR] timer (KERNEL)\n", myproc()->pid, cpuid());
+    printk("[pid %d | cpu %d] [TIMER_IRQ] user\n", myproc()->pid, cpuid());
     yield();
   }
 
