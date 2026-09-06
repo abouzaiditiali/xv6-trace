@@ -251,16 +251,12 @@ iget(uint dev, uint inum)
   struct inode *ip, *empty;
 
   acquire(&itable.lock);
-  //printk("iget(dev=%u, inum=%u)\n", dev, inum);
 
   // Is the inode already in the table?
   empty = 0;
   for (ip = &itable.inode[0]; ip < &itable.inode[NINODE]; ip++) {
     if (ip->ref > 0 && ip->dev == dev && ip->inum == inum) {
       ip->ref++;
-
-      //printk("[EDIT] ite: ip=0x%lx ip->ref=%d(+1)\n", (uint64)ip, ip->ref);
-
       release(&itable.lock);
       return ip;
     }
@@ -272,16 +268,11 @@ iget(uint dev, uint inum)
   if (empty == 0)
     panic("iget: no inodes");
 
-
   ip = empty;
   ip->dev = dev;
   ip->inum = inum;
   ip->ref = 1;
   ip->valid = 0;
-
-  //printk("[RECYCLE] ite: ip=0x%lx ip->dev=%u ip->inum=%u ip->ref=%d ip->valid=%d\n",
-   //         (uint64)ip, ip->dev, ip->inum, ip->ref, ip->valid);
-
   release(&itable.lock);
 
   return ip;
@@ -293,11 +284,7 @@ struct inode *
 idup(struct inode *ip)
 {
   acquire(&itable.lock);
-  //printk("idup(ip=0x%lx)\n", (uint64)ip);
   ip->ref++;
-
-  //printk("[EDIT] ite: ip=0x%lx ip->ref=%d(+1)\n", (uint64)ip, ip->ref);
-
   release(&itable.lock);
   return ip;
 }
@@ -314,7 +301,6 @@ ilock(struct inode *ip)
     panic("ilock");
 
   acquiresleep(&ip->lock);
-  //printk("ilock(ip=0x%lx)\n", (uint64)ip);
 
   if (ip->valid == 0) {
     bp = bread(ip->dev, IBLOCK(ip->inum, sb));
@@ -327,11 +313,6 @@ ilock(struct inode *ip)
     memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
     brelse(bp);
     ip->valid = 1;
-    //printk("ite: ip=0x%lx ip->type=%hd ip->major=%hd ip->minor=%hd
-    //                ip->nlink=%hd ip->size=%u ip->addrs.. ip->valid=%d\n",
-    //                (uint64)ip, ip->type, ip->major, ip->minor, ip->nlink,
-    //                ip->size, ip->valid);
-
     if (ip->type == 0)
       panic("ilock: no type");
   }
@@ -718,7 +699,6 @@ namex(char *path, int nameiparent, char *name)
     ip = idup(myproc()->cwd);
 
   while ((path = skipelem(path, name)) != 0) {
-    // name is the next path element
     ilock(ip);
     if (ip->type != T_DIR) {
       iunlockput(ip);
@@ -733,7 +713,6 @@ namex(char *path, int nameiparent, char *name)
       iunlock(ip);
       return ip;
     }
-
     if ((next = dirlookup(ip, name, 0)) == 0) {
       iunlockput(ip);
       return 0;
