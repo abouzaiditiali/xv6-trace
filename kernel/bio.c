@@ -65,6 +65,9 @@ bget(uint dev, uint blockno)
   for (b = bcache.head.next; b != &bcache.head; b = b->next) {
     if (b->dev == dev && b->blockno == blockno) {
       b->refcnt++;
+
+      //printk("[EDIT] bce: b=0x%lx b->refnt=%u(+1)\n", (uint64)b, b->refcnt);
+
       release(&bcache.lock);
       acquiresleep(&b->lock);
       return b;
@@ -79,6 +82,10 @@ bget(uint dev, uint blockno)
       b->blockno = blockno;
       b->valid = 0;
       b->refcnt = 1;
+
+      //printk("[RECYCLE] bce (NOT CACHED): b=0x%lx b->dev=%u b->blockno=%u b->valid=%d
+      //  b->refcnt=%u\n", (uint64)b, b->dev, b->blockno, b->valid, b->refcnt);
+                    
       release(&bcache.lock);
       acquiresleep(&b->lock);
       return b;
@@ -93,10 +100,14 @@ bread(uint dev, uint blockno)
 {
   struct buf *b;
 
+  //printk("bread(dev=%u, blockno=%u)\n", dev, blockno);
+
   b = bget(dev, blockno);
   if (!b->valid) {
     virtio_disk_rw(b, 0);
     b->valid = 1;
+
+    //printk("[EDIT] bce (READ DONE): b=0x%lx b->valid=%d\n", (uint64)b, b->valid);
   }
   return b;
 }
@@ -123,6 +134,9 @@ brelse(struct buf *b)
 
   acquire(&bcache.lock);
   b->refcnt--;
+
+  //printk("[EDIT] bce: b=0x%lx b->refnt=%u(-1)\n", (uint64)b, b->refcnt);
+
   if (b->refcnt == 0) {
     // no one is waiting for it.
     b->next->prev = b->prev;
@@ -141,6 +155,9 @@ bpin(struct buf *b)
 {
   acquire(&bcache.lock);
   b->refcnt++;
+
+  //printk("[EDIT] bce: b=0x%lx b->refnt=%u(+1)\n", (uint64)b, b->refcnt);
+
   release(&bcache.lock);
 }
 
@@ -149,5 +166,8 @@ bunpin(struct buf *b)
 {
   acquire(&bcache.lock);
   b->refcnt--;
+
+  //printk("[EDIT] bce: b=0x%lx b->refnt=%u(-1)\n", (uint64)b, b->refcnt);
+
   release(&bcache.lock);
 }

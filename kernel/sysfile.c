@@ -334,13 +334,16 @@ sys_open(void)
   struct inode *ip;
   int n;
 
+  // store syscall arg 1 in omode as an int
   argint(1, &omode);
+  // store syscall arg 0 in path as an array of chars 
   if ((n = argstr(0, path, MAXPATH)) < 0)
     return -1;
 
   begin_op();
 
   if (omode & O_CREATE) {
+    // if asked to create, create a file inode 
     ip = create(path, T_FILE, 0, 0);
     if (ip == 0) {
       end_op();
